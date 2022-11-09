@@ -1,0 +1,52 @@
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+
+train = pd.read_csv('../data/train_after.csv')
+test = pd.read_csv('../data/test.csv')
+
+# continuous feature
+test_stage_features = ['COMPONENT_ARBITRARY', 'ANONYMOUS_1', 'YEAR' , 'ANONYMOUS_2', 'AG', 'CO', 'CR', 'CU', 'FE', 'H2O', 'MN', 'MO', 'NI', 'PQINDEX', 'TI', 'V', 'V40', 'ZN']
+
+fig, axes = plt.subplots(9, 2, figsize=(17,30))
+sns.countplot(x='COMPONENT_ARBITRARY', data=train, ax=axes[0][0])
+sns.countplot(x='COMPONENT_ARBITRARY', data=test, ax=axes[0][1])
+sns.histplot(x='ANONYMOUS_1', kde=True, data=train, ax=axes[1][0], log_scale=True)
+sns.histplot(x='ANONYMOUS_1', kde=True, data=test, ax=axes[1][1], log_scale=True)
+sns.countplot(x='YEAR', data=train, ax=axes[2][0])
+sns.countplot(x='YEAR', data=test, ax=axes[2][1])
+sns.countplot(x='ANONYMOUS_2', data=train, kde=True, ax=axes[3][0], log_scale=True)
+sns.countplot(x='ANONYMOUS_2', data=test, kde=True, ax=axes[3][1], log_scale=True)
+sns.histplot(x='AG', data=train, kde=True, ax=axes[4][0])
+sns.histplot(x='AG', data=test, kde=True, ax=axes[4][1])
+sns.histplot(x='CO', data=train, kde=True, ax=axes[5][0])
+sns.histplot(x='CO', data=test, kde=True, ax=axes[5][1])
+sns.histplot(x='CR', data=train, kde=True, ax=axes[6][0])
+sns.histplot(x='CR', data=test, kde=True, ax=axes[6][1])
+sns.histplot(x='CU', data=train, kde=True, ax=axes[7][0])
+sns.histplot(x='CU', data=test, kde=True, ax=axes[7][1])
+sns.histplot(x='FE', data=train, kde=True, ax=axes[8][0])
+sns.histplot(x='FE', data=test, kde=True, ax=axes[8][1])
+plt.show()
+
+fig, axes = plt.subplots(9, 2, figsize=(17,30))
+sns.histplot(x='H2O', data=train, kde=True, ax=axes[0][0], log_scale=True)
+sns.histplot(x='H2O', data=test, kde=True, ax=axes[0][1], log_scale=True)
+sns.histplot(x='MN', data=train, kde=True, ax=axes[1][0], log_scale=True)
+sns.histplot(x='MN', data=test, ax=axes[1][1], kde=True, log_scale=True)
+sns.histplot(x='MO', data=train, kde=True, ax=axes[2][0], log_scale=True)
+sns.histplot(x='MO', data=test, kde=True, ax=axes[2][1], log_scale=True)
+sns.histplot(x='NI', data=train, kde=True, ax=axes[3][0], log_scale=True)
+sns.histplot(x='NI', data=test, kde=True, ax=axes[3][1], log_scale=True)
+sns.histplot(x='PQINDEX', data=train, kde=True, ax=axes[4][0], log_scale=True)
+sns.histplot(x='PQINDEX', data=test, kde=True, ax=axes[4][1], log_scale=True)
+sns.histplot(x='TI', data=train, kde=True, ax=axes[5][0], log_scale=True)
+sns.histplot(x='TI', data=test, kde=True, ax=axes[5][1], log_scale=True)
+sns.histplot(x= 'V', data=train, kde=True, ax=axes[6][0], log_scale=True)
+sns.histplot(x= 'V', data=test, kde=True, ax=axes[6][1], log_scale=True)
+sns.histplot(x='V40', data=train, kde=True, ax=axes[7][0], log_scale=True)
+sns.histplot(x='V40', data=test, kde=True, ax=axes[7][1], log_scale=True)
+sns.histplot(x='ZN', data=train, kde=True, ax=axes[8][0], log_scale=True)
+sns.histplot(x='ZN', data=test, kde=True, ax=axes[8][1], log_scale=True)
+plt.tight_layout()
+plt.show()
