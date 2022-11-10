@@ -28,14 +28,14 @@ corr = train.corr()['Y_LABEL']
 print(abs(corr).sort_values(ascending=False))
 print('\n--------------------------------------')
 
-fig, axes = plt.subplots(2, 1, figsize=(20,20))
+fig, axes = plt.subplots(2, 1, figsize=(20,20), constrained_layout=True)
 sns.countplot(x='COMPONENT_ARBITRARY', hue='Y_LABEL',data=train, ax=axes[0])
 sns.countplot(x='YEAR', hue='Y_LABEL',data=train, ax=axes[1])
 plt.show()
 
 train = train.fillna(0)
-def plot_category_percent_of_target(train, col):
-    fig, ax = plt.subplots(1, 1, figsize=(30, 20))
+def plot_category_percent_of_target(col):
+    fig, ax = plt.subplots(1, 1, figsize=(30, 20), constrained_layout=True)
     cat_percent = train[[col, 'Y_LABEL']].groupby(col, as_index=False).mean()
     cat_size = train[col].value_counts().reset_index(drop=False)
     cat_size.columns = [col, 'count']
@@ -54,8 +54,8 @@ def plot_category_percent_of_target(train, col):
 plot_category_percent_of_target('COMPONENT_ARBITRARY')
 
 
-def plot_kde_hist_for_numeric(train, col):
-    fig, ax = plt.subplots(1, 2, figsize=(16, 8))
+def plot_kde_hist_for_numeric(col):
+    fig, ax = plt.subplots(1, 2, figsize=(16, 8), constrained_layout=True)
     sns.kdeplot(train.loc[train['Y_LABEL'] == 0, col], ax=ax[0], label='Y_LABEL(0)')
     sns.kdeplot(train.loc[train['Y_LABEL'] == 1, col], ax=ax[0], label='Y_LABEL(1)')
 
@@ -79,7 +79,7 @@ def plot_kde_hist_for_numeric(train, col):
 
 
 def plot_category_percent_of_target_for_numeric(col):
-    fig, ax = plt.subplots(1, 2, figsize=(20, 10))
+    fig, ax = plt.subplots(1, 2, figsize=(20, 10), constrained_layout=True)
     cat_percent = train[[col, 'Y_LABEL']].groupby(col, as_index=False).mean()
     cat_size = train[col].value_counts().reset_index(drop=False)
     cat_size.columns = [col, 'count']
