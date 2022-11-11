@@ -36,6 +36,9 @@ cu + ag ->  Silver bearing tough pitch
 
 피스톤링 간극: 0.02~0.05mm or 0.03~0.13mm
 
+점도가 높으면 산화가 잘 일어남? -> V100
+fnox, foxid, fso4, ftbn
+그리고 component와 연관?
 
 
 
