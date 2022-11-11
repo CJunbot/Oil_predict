@@ -8,7 +8,6 @@ acid number/FTBN -> 산/염기 비율?
 
 CU, mo, fe, cu, ni, co, mn,s 중금속촉매/ stearate napththenate 불용성금속촉매
 
-
 칼슘, 마그네슘, 바륨, 나트륨 -> 청정제 성분
 
 potassium,boron, chromium, phosphorus and silicon -> anti freeze
@@ -31,8 +30,12 @@ cu + ag ->  Silver bearing tough pitch
 
 0.5~2.5um -> 오일필터 통과 <- 산화로 생성된 물질(열화,산화)
 
+0~5/5~10/10~20
+
 피스톤 간극: 0.04~0.06mm?
 
 피스톤링 간극: 0.02~0.05mm or 0.03~0.13mm
+
+
 
 

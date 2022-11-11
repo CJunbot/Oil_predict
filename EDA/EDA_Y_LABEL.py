@@ -6,11 +6,15 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.filterwarnings('ignore')
 
 plt.style.use('seaborn')
-sns.set(font_scale=2)
 pd.set_option('display.max_columns', 500)
 
-train = pd.read_csv('../data/train_after.csv')
+train = pd.read_csv('../data/train.csv')
 test = pd.read_csv('../data/test.csv')
+
+plt.figure(figsize=(70,70))
+sns.heatmap(train.corr(), annot=True, annot_kws={"size": 7})
+plt.show()
+
 print(f'shape of data: train:{train.shape} test: {test.shape}\n--------------------------------------')
 
 train['Y_LABEL'].value_counts().plot.bar()
