@@ -92,6 +92,7 @@ for col in categorical_features:
     if col in test.columns:
         test[col] = le.transform(test[col])
 
+
 def get_model_3():
     inp = keras.layers.Input((CFG['num_preds']*CFG['num_features'],))
     x = keras.layers.Reshape((CFG['num_preds']*CFG['num_features'],1))(inp)

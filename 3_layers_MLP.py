@@ -31,7 +31,8 @@ class Model(nn.Module):
         self.hidden_size = [1500, 1250, 1000, 750]
         self.dropout_value = [0.5, 0.35, 0.3, 0.25]
 
-        self.batch_norm1 = nn.BatchNorm1d(num_features)
+        self.batch_norm1 = nn.Conv1d(32, CFG['num_preds'], stride=CFG['num_preds'], activation='elu')
+        self.batch_norm1 = nn.BA(32, CFG['num_preds'], stride=CFG['num_preds'], activation='elu')
         self.dense1 = nn.Linear(num_features, self.hidden_size[0])
 
         self.batch_norm2 = nn.BatchNorm1d(self.hidden_size[0])
