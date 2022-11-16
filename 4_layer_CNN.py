@@ -1,8 +1,3 @@
-from sklearn.metrics import f1_score
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import train_test_split
-import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -33,7 +28,7 @@ CFG = {
     'EPOCHS': 50,
     'LEARNING_RATE':1e-2,
     'BATCH_SIZE':256,
-    'BATCH_SIZE_DATA':256,
+    'BATCH_SIZE_DATA':42,
     'SEED':42,
     'EARLY_STOPPING_STEPS':10,
     'EARLY_STOP':False,
@@ -241,45 +236,23 @@ teacher_model = train(model, optimizer, train_loader, val_loader, scheduler, dev
 class Student(nn.Module):
     def __init__(self):
         super(Student, self).__init__()
-        self.conv1d = nn.Conv1d(1, 32, kernel_size=CFG['num_preds'], stride=CFG['num_preds'])
-        self.activation = nn.ELU()
-        self.batchnorm1d = nn.BatchNorm1d(32)
-        self.conv1d2 = nn.Conv1d(32, 24, kernel_size=1)
-        self.activation = nn.ELU()
-        self.batchnorm1d2 = nn.BatchNorm1d(24)
-        self.conv1d3 = nn.Conv1d(24, 16, kernel_size=1)
-        self.activation = nn.ELU()
-        self.batchnorm1d3 = nn.BatchNorm1d(16)
-        self.conv1d4 = nn.Conv1d(16, 4, kernel_size=1)
-        self.activation = nn.ELU()
-        self.flatten = nn.Flatten()
-        self.pool = nn.AvgPool1d(2)
-        self.flatten2 = nn.Flatten()
-        self.batchnorm1d4 = nn.BatchNorm1d(36)
-        self.out = nn.Linear(36,1)
-        self.act = nn.Sigmoid()
+        self.classifier = nn.Sequential(
+            nn.Linear(in_features=18, out_features=128),
+            nn.BatchNorm1d(128),
+            nn.LeakyReLU(),
+            nn.Linear(in_features=128, out_features=512),
+            nn.BatchNorm1d(512),
+            nn.LeakyReLU(),
+            nn.Linear(in_features=512, out_features=128),
+            nn.BatchNorm1d(128),
+            nn.LeakyReLU(),
+            nn.Linear(in_features=128, out_features=1),
+            nn.Sigmoid()
+        )
 
 
     def forward(self, x):
-        x = x.reshape((x.shape[0], 1, CFG['num_preds']*CFG['num_features_test']))
-        x = self.conv1d(x)
-        x = self.activation(x)
-        x = self.batchnorm1d(x)
-        x = self.conv1d2(x)
-        x = self.activation(x)
-        x = self.batchnorm1d2(x)
-        x = self.conv1d3(x)
-        x = self.activation(x)
-        x = self.batchnorm1d3(x)
-        x = self.conv1d4(x)
-        x = self.activation(x)
-        x = self.flatten(x)
-        x = x.reshape((x.shape[0], 1, CFG['num_features_test']*4))
-        x = self.pool(x)
-        x = self.flatten2(x)
-        x = self.batchnorm1d4(x)
-        x = self.out(x)
-        x = self.act(x)
+        x = self.classifier(x)
         return x
 
 

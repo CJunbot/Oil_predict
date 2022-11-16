@@ -1,27 +1,21 @@
 import keras
-from sklearn.metrics import f1_score
-from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import train_test_split
-import pandas as pd
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torch.utils.data import DataLoader, Dataset
-from sklearn.metrics import f1_score
+from sklearn.model_selection import StratifiedKFold,KFold
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from torch.nn.modules.loss import _WeightedLoss
-from copy import deepcopy as dp
 import os
 import pandas as pd
 import numpy as np
 from tqdm.auto import tqdm
-import random
-import warnings
 import keras.backend as K
+import warnings
+from copy import deepcopy
+warnings.filterwarnings(action='ignore')
+
+
+def get_values(value):
+    return value.values.reshape(-1, 1)
 
 
 def custom_f1(y_true, y_pred):
@@ -65,32 +59,9 @@ test_stage_features = ['COMPONENT_ARBITRARY', 'ANONYMOUS_1', 'YEAR' , 'ANONYMOUS
 train = train.fillna(0)
 test = test.fillna(0)
 
-all_X = train.drop(['ID', 'Y_LABEL'], axis = 1)
-all_y = train['Y_LABEL']
-
-test = test.drop(['ID'], axis = 1)
-
-train_X, val_X, train_y, val_y = train_test_split(all_X, all_y, test_size=0.2, random_state=CFG['SEED'], stratify=all_y)
-
-
-def get_values(value):
-    return value.values.reshape(-1, 1)
-
-
-for col in train_X.columns:
-    if col not in categorical_features:
-        scaler = StandardScaler()
-        train_X[col] = scaler.fit_transform(get_values(train_X[col]))
-        val_X[col] = scaler.transform(get_values(val_X[col]))
-        if col in test.columns:
-            test[col] = scaler.transform(get_values(test[col]))
-
-le = LabelEncoder()
-for col in categorical_features:
-    train_X[col] = le.fit_transform(train_X[col])
-    val_X[col] = le.transform(val_X[col])
-    if col in test.columns:
-        test[col] = le.transform(test[col])
+y = train['Y_LABEL']
+x = train.drop(['ID', 'Y_LABEL'], axis=1)
+test = test.drop(['ID'], axis=1)
 
 
 def get_model_3():
@@ -120,16 +91,43 @@ def lr_scheduler(epoch):
 
 
 def train_NN():
+    folds = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    pred = np.zeros(len(train))
+    for tr_idx, val_idx in folds.split(x, y):
+        x_d = deepcopy(x)
+        y_d = deepcopy(y)
+        test_d = deepcopy(test)
+        x_train, x_val = x_d.iloc[tr_idx], x_d.iloc[val_idx]
+        y_train, y_val = y_d.iloc[tr_idx], y_d.iloc[val_idx]
+        for col in x_train.columns:
+            if col not in categorical_features:
+                scaler = StandardScaler()
+                x_train[col] = scaler.fit_transform(get_values(x_train[col]))
+                x_val[col] = scaler.transform(get_values(x_val[col]))
+                if col in test_d.columns:
+                    test_d[col] = scaler.transform(get_values(test_d[col]))
+
+        le = LabelEncoder()
+        for col in categorical_features:
+            x_train[col] = le.fit_transform(x_train[col])
+            x_val[col] = le.transform(x_val[col])
+            if col in test_d.columns:
+                test_d[col] = le.transform(test_d[col])
+
         optimizer = keras.optimizers.Adam(lr=CFG['LEARNING_RATE'], decay=0.00001)
         model = get_model_3()
         callbacks = []
         callbacks.append(keras.callbacks.LearningRateScheduler(lr_scheduler))
         model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=[custom_f1])
 
-        model.fit(train_X, train_y, validation_data=(val_X, val_y), epochs=CFG['EPOCHS'],
+        model.fit(x_train, y_train, validation_data=(x_val, y_val), epochs=CFG['EPOCHS'],
                   verbose=2, batch_size=CFG['BATCH_SIZE'], callbacks=callbacks)
 
-        pred = model.predict(val_X, batch_size=256)
-        return pred
+        cash = model.predict(x_val)
+        print(cash.shape)
+        pred[val_idx] = cash.reshape(-1)
+    return pred
 
-train_NN()
+
+pred = train_NN()
+pred = pd.DataFrame(pred).to_csv('data/teacher.csv', index=False)
