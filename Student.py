@@ -51,7 +51,7 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 CFG = {
     'EPOCHS': 50,
     'LEARNING_RATE':1e-2,
-    'BATCH_SIZE':256,
+    'BATCH_SIZE':42,
     'SEED':42
 }
 
@@ -69,7 +69,7 @@ seed_everything(CFG['SEED'])
 
 train = pd.read_csv('data/train_after.csv')
 test = pd.read_csv('data/test.csv')
-train_knowledge = pd.read_csv('data/teacher.csv')
+train_knowledge = pd.read_csv('data/teacher_4cnn.csv')
 
 categorical_features = ['COMPONENT_ARBITRARY', 'YEAR']
 # Inference(실제 진단 환경)에 사용하는 컬럼
@@ -131,22 +131,6 @@ class Student(nn.Module):
         return output
 
 
-def distillation(student_logits, labels, teacher_logits, alpha):
-    distillation_loss = nn.BCELoss()(student_logits, teacher_logits)
-    student_loss = nn.BCELoss()(student_logits, labels.reshape(-1, 1))
-    return alpha * student_loss + (1-alpha) * distillation_loss
-
-
-def distill_loss(output, target, teacher_output, loss_fn=distillation, opt=optimizer):
-    loss_b = loss_fn(output, target, teacher_output, alpha=0.1)
-
-    if opt is not None:
-        opt.zero_grad()
-        loss_b.backward()
-        opt.step()
-
-    return loss_b.item()
-
 
 def student_train(s_model, optimizer, train_loader, val_loader, scheduler, device):
     s_model.to(device)
@@ -165,7 +149,7 @@ def student_train(s_model, optimizer, train_loader, val_loader, scheduler, devic
             optimizer.zero_grad()
 
             output = s_model(X_s)
-            teacher_output = train_knowledge['target'][index]
+            teacher_output = torch.tensor(train_knowledge['target'][list(index)].values).reshape(len(index), 1)
 
             loss_b = distill_loss(output, y, teacher_output, loss_fn=distillation, opt=optimizer)
 
@@ -194,13 +178,12 @@ def validation_student(s_model, val_loader, criterion, device):
     threshold = 0.35
 
     with torch.no_grad():
-        for X_t, X_s, y in tqdm(val_loader):
-            X_t = X_t.float().to(device)
+        for X_s, y, index in tqdm(val_loader):
             X_s = X_s.float().to(device)
             y = y.float().to(device)
 
             model_pred = s_model(X_s)
-            teacher_output = t_model(X_t)
+            teacher_output = torch.tensor(train_knowledge['target'][list(index)].values).reshape(len(index), 1)
 
             loss_b = distill_loss(model_pred, y, teacher_output, loss_fn=distillation, opt=None)
             val_loss.append(loss_b)
@@ -222,7 +205,25 @@ val_loader = DataLoader(val_dataset, batch_size = CFG['BATCH_SIZE'], shuffle=Fal
 student_model = Student()
 student_model.eval()
 optimizer = torch.optim.Adam(student_model.parameters(), lr=CFG['LEARNING_RATE'])
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=1, threshold_mode='abs',min_lr=1e-8, verbose=True)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=1, threshold_mode='abs', min_lr=1e-8, verbose=True)
+
+
+def distillation(student_logits, labels, teacher_logits, alpha):
+    distillation_loss = nn.BCELoss()(student_logits.float(), teacher_logits.float())
+    student_loss = nn.BCELoss()(student_logits, labels.reshape(-1, 1))
+    return alpha * student_loss + (1-alpha) * distillation_loss
+
+
+def distill_loss(output, target, teacher_output, loss_fn=distillation, opt=optimizer):
+    loss_b = loss_fn(output, target, teacher_output, alpha=0.1)
+
+    if opt is not None:
+        opt.zero_grad()
+        loss_b.backward()
+        opt.step()
+
+    return loss_b.item()
+
 
 best_student_model = student_train(student_model, optimizer, train_loader, val_loader, scheduler, device)
 
@@ -238,7 +239,7 @@ def choose_threshold(model, val_loader, device):
     best_score = 0
     best_thr = None
     with torch.no_grad():
-        for _, x_s, y in tqdm(iter(val_loader)):
+        for x_s, y, index in tqdm(iter(val_loader)):
             x_s = x_s.float().to(device)
             y = y.float().to(device)
 

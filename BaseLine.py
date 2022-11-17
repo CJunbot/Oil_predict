@@ -37,7 +37,7 @@ def seed_everything(seed):
 
 seed_everything(CFG['SEED'])
 
-train = pd.read_csv('data/train_after.csv')
+train = pd.read_csv('data/train.csv')
 test = pd.read_csv('data/test.csv')
 
 categorical_features = ['COMPONENT_ARBITRARY', 'YEAR']
