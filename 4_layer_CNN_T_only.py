@@ -6,14 +6,10 @@ from torch.utils.data import DataLoader, Dataset
 from sklearn.metrics import f1_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import train_test_split
-from torch.nn.modules.loss import _WeightedLoss
-from copy import deepcopy as dp
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, KFold
 import pandas as pd
 import numpy as np
 from tqdm.auto import tqdm
-import random
 import warnings
 from copy import deepcopy
 warnings.filterwarnings(action='ignore')
@@ -24,8 +20,9 @@ def competition_metric(true, pred):
 
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+print(f'Using: {device}')
 
-
+# Hyper parameters
 CFG = {
     'EPOCHS': 50,
     'LEARNING_RATE':1e-2,
@@ -52,6 +49,8 @@ y = train['Y_LABEL']
 x = train.drop(['ID', 'Y_LABEL'], axis=1)
 test = test.drop(['ID'], axis=1)
 
+# k fold 학습 시 각각의 best validation score 출력을 위해
+val_list = []
 
 def get_values(value):
     return value.values.reshape(-1, 1)
@@ -156,18 +155,24 @@ def validation_teacher(model, val_loader, criterion, device):
     return val_loss, val_f1
 
 
-def model_train(model, optimizer, scheduler, device, x_origin, y_origin):
-    folds = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+def model_train(device, x_origin, y_origin):
+    folds = KFold(n_splits=5, shuffle=True, random_state=42)
     pred = np.zeros(len(train))
-    model.to(device)
 
-    best_score = 0
-    best_model = None
-    criterion = nn.BCEWithLogitsLoss().to(device)
+    for tr_idx, val_idx in folds.split(x_origin):
+        criterion = nn.BCEWithLogitsLoss().to(device)
+        best_score = 0
+        best_model = None
+        early_stopping_steps = CFG['EARLY_STOPPING_STEPS']
+        early_step = 0
+        # 모델, 옵티마이저, 스케쥴러 선언
+        model = Teacher()
+        model.eval()
+        model.to(device)
+        optimizer = torch.optim.Adam(model.parameters(), lr=CFG['LEARNING_RATE'])
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=1,
+                                                               threshold_mode='abs', min_lr=1e-8, verbose=True)
 
-    early_stopping_steps = CFG['EARLY_STOPPING_STEPS']
-    early_step = 0
-    for tr_idx, val_idx in folds.split(x_origin, y_origin):
         x_d = deepcopy(x_origin)
         y_d = deepcopy(y_origin)
         test_d = deepcopy(test)
@@ -228,23 +233,20 @@ def model_train(model, optimizer, scheduler, device, x_origin, y_origin):
                 if (early_step >= early_stopping_steps):
                     break
 
-        with torch.no_grad():
-            for X, y, index in tqdm(val_loader):
-                X = X.float().to(device)
+        val_list.append(best_score)
 
-                model_pred = model(X.to(device))
-                pred[index] = model_pred.reshape(-1)
+        with torch.no_grad():
+            X = torch.Tensor(np.array(x_val))
+            X = X.float().to(device)
+            model_pred = model(X.to(device))
+            model_pred = model_pred.squeeze(1).to('cpu')
+            pred[val_idx] = model_pred.reshape(-1)
 
     return best_model, pred
 
 
-model = Teacher()
-model.eval()
-optimizer = torch.optim.Adam(model.parameters(), lr=CFG['LEARNING_RATE'])
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=1, threshold_mode='abs',min_lr=1e-8, verbose=True)
-
-teacher_model, pred = model_train(model, optimizer, scheduler, device, x, y)
-
+teacher_model, pred = model_train(device, x, y)
+print(val_list)
 pred = pd.DataFrame(pred).to_csv('data/teacher_4cnn.csv', index=False)
 
 # 0.561 -> 여기서 studnet 학습했을때

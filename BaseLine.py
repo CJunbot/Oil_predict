@@ -15,6 +15,7 @@ import random
 import warnings
 warnings.filterwarnings(action='ignore')
 
+# Baseline: T: 8.20 / S: 5.7488
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -37,12 +38,12 @@ def seed_everything(seed):
 
 seed_everything(CFG['SEED'])
 
-train = pd.read_csv('data/train.csv')
+train = pd.read_csv('data/train_after.csv')
 test = pd.read_csv('data/test.csv')
 
 categorical_features = ['COMPONENT_ARBITRARY', 'YEAR']
 # Inference(실제 진단 환경)에 사용하는 컬럼
-test_stage_features = ['COMPONENT_ARBITRARY', 'ANONYMOUS_1', 'YEAR' , 'ANONYMOUS_2', 'AG', 'CO', 'CR', 'CU', 'FE', 'H2O', 'MN', 'MO', 'NI', 'PQINDEX', 'TI', 'V', 'V40', 'ZN']
+test_stage_features = ['COMPONENT_ARBITRARY', 'ANONYMOUS_1', 'YEAR', 'ANONYMOUS_2', 'AG', 'CO', 'CR', 'CU', 'FE', 'H2O', 'MN', 'MO', 'NI', 'PQINDEX', 'TI', 'V', 'V40', 'ZN']
 
 train = train.fillna(0)
 test = test.fillna(0)

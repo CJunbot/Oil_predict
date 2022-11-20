@@ -7,28 +7,23 @@ from sklearn.metrics import f1_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
-from torch.nn.modules.loss import _WeightedLoss
-from copy import deepcopy as dp
 import os
 import pandas as pd
 import numpy as np
 from tqdm.auto import tqdm
 import random
 import warnings
-
-
-def competition_metric(true, pred):
-    return f1_score(true, pred, average="macro")
+warnings.filterwarnings(action='ignore')
 
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+print(f'Using: {device}')
 
-
+# Hyper parameters
 CFG = {
     'EPOCHS': 50,
     'LEARNING_RATE':1e-2,
     'BATCH_SIZE':256,
-    'BATCH_SIZE_DATA':42,
     'SEED':42,
     'EARLY_STOPPING_STEPS':10,
     'EARLY_STOP':False,
@@ -37,12 +32,24 @@ CFG = {
     'num_preds':1
 }
 
+def seed_everything(seed):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = True
+
+
+seed_everything(CFG['SEED'])
+
 train = pd.read_csv('data/train_after.csv')
 test = pd.read_csv('data/test.csv')
 
 categorical_features = ['COMPONENT_ARBITRARY', 'YEAR']
 # Inference(실제 진단 환경)에 사용하는 컬럼
-test_stage_features = ['COMPONENT_ARBITRARY', 'ANONYMOUS_1', 'YEAR' , 'ANONYMOUS_2', 'AG', 'CO', 'CR', 'CU', 'FE', 'H2O', 'MN', 'MO', 'NI', 'PQINDEX', 'TI', 'V', 'V40', 'ZN']
+test_stage_features = ['COMPONENT_ARBITRARY', 'ANONYMOUS_1', 'YEAR', 'ANONYMOUS_2', 'AG', 'CO', 'CR', 'CU', 'FE', 'H2O', 'MN', 'MO', 'NI', 'PQINDEX', 'TI', 'V', 'V40', 'ZN']
 
 train = train.fillna(0)
 test = test.fillna(0)
@@ -101,6 +108,11 @@ class CustomDataset(Dataset):
                 y = self.data_y.values[index]
                 return teacher_X, y
 
+train_dataset = CustomDataset(train_X, train_y, False)
+val_dataset = CustomDataset(val_X, val_y, False)
+train_loader = DataLoader(train_dataset, batch_size = 42, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size = 42, shuffle=False)
+
 
 class Teacher(nn.Module):
     def __init__(self):
@@ -147,10 +159,48 @@ class Teacher(nn.Module):
         return x
 
 
-train_dataset = CustomDataset(train_X, train_y, False)
-val_dataset = CustomDataset(val_X, val_y, False)
-train_loader = DataLoader(train_dataset, batch_size=CFG['BATCH_SIZE_DATA'], shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=CFG['BATCH_SIZE_DATA'], shuffle=False)
+def train(model, optimizer, train_loader, val_loader, scheduler, device):
+    model.to(device)
+
+    best_score = 0
+    best_model = None
+    criterion = nn.BCELoss().to(device)
+
+    for epoch in range(CFG["EPOCHS"]):
+        train_loss = []
+
+        model.train()
+        for X, y in tqdm(train_loader):
+            X = X.float().to(device)
+            y = y.float().to(device)
+
+            optimizer.zero_grad()
+
+            y_pred = model(X)
+
+            loss = criterion(y_pred, y.reshape(-1, 1))
+            loss.backward()
+
+            optimizer.step()
+
+            train_loss.append(loss.item())
+
+        val_loss, val_score = validation_teacher(model, val_loader, criterion, device)
+        print(
+            f'Epoch [{epoch}], Train Loss : [{np.mean(train_loss) :.5f}] Val Loss : [{np.mean(val_loss) :.5f}] Val F1 Score : [{val_score:.5f}]')
+
+        if scheduler is not None:
+            scheduler.step(val_score)
+
+        if best_score < val_score:
+            best_model = model
+            best_score = val_score
+
+    return best_model
+
+
+def competition_metric(true, pred):
+    return f1_score(true, pred, average="macro")
 
 
 def validation_teacher(model, val_loader, criterion, device):
@@ -179,52 +229,6 @@ def validation_teacher(model, val_loader, criterion, device):
         val_f1 = competition_metric(true_labels, pred_labels)
     return val_loss, val_f1
 
-
-def train(model, optimizer, train_loader, val_loader, scheduler, device):
-    model.to(device)
-
-    best_score = 0
-    best_model = None
-    criterion = nn.BCEWithLogitsLoss().to(device)
-
-    early_stopping_steps = CFG['EARLY_STOPPING_STEPS']
-    early_step = 0
-    for epoch in range(CFG["EPOCHS"]):
-        train_loss = []
-
-        model.train()
-        for X, y in tqdm(train_loader):
-            X = X.float().to(device)
-            y = y.float().to(device)
-
-            optimizer.zero_grad()
-
-            y_pred = model(X)
-            loss = criterion(y_pred, y.reshape(-1, 1))
-            loss.backward()
-
-            optimizer.step()
-
-            train_loss.append(loss.item())
-
-        val_loss, val_score = validation_teacher(model, val_loader, criterion, device)
-        print(
-            f'Epoch [{epoch}], Train Loss : [{np.mean(train_loss) :.5f}] Val Loss : [{np.mean(val_loss) :.5f}] Val F1 Score : [{val_score:.5f}]')
-
-        if scheduler is not None:
-            scheduler.step(val_score)
-
-        if best_score < val_score:
-            best_model = model
-            best_score = val_score
-
-        elif (CFG['EARLY_STOP'] == True):
-            early_step += 1
-            if (early_step >= early_stopping_steps):
-                break
-    return best_model
-
-
 model = Teacher()
 model.eval()
 optimizer = torch.optim.Adam(model.parameters(), lr=CFG['LEARNING_RATE'])
@@ -236,23 +240,32 @@ teacher_model = train(model, optimizer, train_loader, val_loader, scheduler, dev
 class Student(nn.Module):
     def __init__(self):
         super(Student, self).__init__()
-        self.classifier = nn.Sequential(
-            nn.Linear(in_features=18, out_features=128),
-            nn.BatchNorm1d(128),
-            nn.LeakyReLU(),
-            nn.Linear(in_features=128, out_features=512),
-            nn.BatchNorm1d(512),
-            nn.LeakyReLU(),
-            nn.Linear(in_features=512, out_features=128),
-            nn.BatchNorm1d(128),
-            nn.LeakyReLU(),
-            nn.Linear(in_features=128, out_features=1),
-            nn.Sigmoid()
-        )
-
+        self.conv1d = nn.Conv1d(1, 12, kernel_size=CFG['num_preds'], stride=CFG['num_preds'])
+        self.activation = nn.ELU()
+        self.batchnorm1d = nn.BatchNorm1d(12)
+        self.conv1d2 = nn.Conv1d(12, 4, kernel_size=1)
+        self.activation = nn.ELU()
+        self.batchnorm1d2 = nn.BatchNorm1d(4)
+        self.flatten = nn.Flatten()
+        self.pool = nn.AvgPool1d(2)
+        self.flatten2 = nn.Flatten()
+        self.out = nn.Linear(36, 1)
+        self.act = nn.Sigmoid()
 
     def forward(self, x):
-        x = self.classifier(x)
+        x = x.reshape((x.shape[0], 1, CFG['num_preds'] * CFG['num_features_test']))
+        x = self.conv1d(x)
+        x = self.activation(x)
+        x = self.batchnorm1d(x)
+        x = self.conv1d2(x)
+        x = self.activation(x)
+        x = self.batchnorm1d2(x)
+        x = self.flatten(x)
+        x = x.reshape((x.shape[0], 1, CFG['num_features_test'] * 4))
+        x = self.pool(x)
+        x = self.flatten2(x)
+        x = self.out(x)
+        x = self.act(x)
         return x
 
 

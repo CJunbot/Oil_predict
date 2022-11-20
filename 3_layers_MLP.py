@@ -8,10 +8,6 @@ from torch import nn
 from torch.utils.data import DataLoader,TensorDataset
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-import pytorch_lightning as pl
-from pytorch_lightning.callbacks.early_stopping import EarlyStopping
-
-
 
 # needed for deterministic output
 SEED = 2

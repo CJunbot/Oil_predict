@@ -7,8 +7,6 @@ from sklearn.metrics import f1_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
-from torch.nn.modules.loss import _WeightedLoss
-from copy import deepcopy as dp
 import os
 import pandas as pd
 import numpy as np
@@ -19,6 +17,7 @@ warnings.filterwarnings(action='ignore')
 
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+print(f'Using: {device}')
 
 CFG = {
     'EPOCHS': 50,
