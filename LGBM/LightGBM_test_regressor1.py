@@ -14,7 +14,7 @@ def competition_metric(true, pred):
 
 
 train = pd.read_csv('train.csv')
-test = pd.read_csv('../data/test.csv')
+test = pd.read_csv('test.csv')
 knowledge = pd.read_csv('LGBM_oil_train_predict.csv')
 
 new_names = {col: re.sub(r'[^A-Za-z0-9_]+', '', col) for col in train.columns}
@@ -23,7 +23,7 @@ new_n_list = list(new_names.values())
 new_names = {col: f'{new_col}_{i}' if new_col in new_n_list[:i] else new_col for i, (col, new_col) in enumerate(new_names.items())}
 train = train.rename(columns=new_names)
 
-categorical_features = ['COMPONENT_ARBITRARY', 'YEAR']
+categorical_features = ['COMPONENT_ARBITRARY']
 # Inference(실제 진단 환경)에 사용하는 컬럼
 test_stage_features = ['COMPONENT_ARBITRARY', 'ANONYMOUS_1', 'YEAR' , 'ANONYMOUS_2', 'AG', 'CO', 'CR', 'CU', 'FE', 'H2O', 'MN', 'MO', 'NI', 'PQINDEX', 'TI', 'V', 'V40', 'ZN']
 
