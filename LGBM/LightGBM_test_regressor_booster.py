@@ -59,21 +59,19 @@ params["verbose"] = 1
 params['metric'] = 'l1'
 params['device_type'] = 'gpu'
 params['boosting_type'] = 'gbdt'
+params['random_state'] = 42
 params['learning_rate'] = 0.004735180883077572  # 0.013119로 고치면 댐
 # 예측력 상승
 params['num_iterations'] = 2500  # = num round, num_boost_round
-params['min_child_samples'] = 121
 params['n_estimators'] = 2666  # 8500
 params['num_leaves'] = 3358
 params['max_depth'] = 6  # 26?
 # overfitting 방지
-params['min_child_weight'] = 1.4612177145539107  # 높을수록 / 최대 6?
 params['min_child_samples'] = 365  # 100 500 ?
 params['subsample'] = 0.8654652273719451  # 낮을수록 overfitting down / 최소 0  = bagging_fraction
-params['subsample_freq'] = 83
-params['reg_alpha'] = 0.14628230079841037  # = lambda l1
-params['reg_lambda'] = 0.01158560129513328  # = lambda l2
-params['min_gain_to_split'] = 0.03601056666830994  # = min_split_gain
+
+
+
 params['colsample_bytree'] = 0.7734619838566695  # 낮을 수록 overfitting down / 최소 0  = feature_fraction
 
 bst = lgb.LGBMRegressor(**params)

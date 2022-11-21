@@ -63,6 +63,7 @@ for tr_idx, val_idx in folds.split(x_origin, y_origin):
     params['metric'] = 'binary_logloss'
     params['device_type'] = 'gpu'
     params['boosting_type'] = 'gbdt'
+    params['random_state']= 42
     params['learning_rate'] = 0.0037695694179783445  # 0.013119로 고치면 댐
     # 예측력 상승
     params['num_iterations'] = 5500  # = num round, num_boost_round
@@ -71,19 +72,10 @@ for tr_idx, val_idx in folds.split(x_origin, y_origin):
     params['num_leaves'] = 19916
     params['max_depth'] = 41  # 26?
     # overfitting 방지
-    params['min_child_weight'] = 2.132006838223528  # 높을수록 / 최대 6?
     params['subsample'] = 0.9867667532255102  # 낮을수록 overfitting down / 최소 0  = bagging_fraction
-    params['subsample_freq'] = 63
-    params['reg_alpha'] = 0.26753664302600466  # = lambda l1
-    params['reg_lambda'] = 0.10282992873487086  # = lambda l2
-    params['min_gain_to_split'] = 0.5613968110180947  # = min_split_gain
     params['colsample_bytree'] = 0.9039390685690392  # 낮을 수록 overfitting down / 최소 0  = feature_fraction
-    #bst = lgb.LGBMClassifier(**params)
-    #bst.fit(x_train, y_train, eval_set=[(x_val, y_val)], eval_metric='binary_logloss', early_stopping_rounds=5)
-    bst = lgb.train(params, train_data, 5000, [val_data], verbose_eval=5, early_stopping_rounds=25)
 
-    #pred_proba = bst.predict_proba(x_val, num_iteration=bst.best_iteration_)
-    #cash = np.concatenate((pred_proba,pred.reshape(len(pred),1)), axis=1)
+    bst = lgb.train(params, train_data, 5000, [val_data], verbose_eval=5, early_stopping_rounds=25)
     best_macro = 0
     for i in [0.05, 0.1, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2, 0.21, 0.22, 0.23, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]:
         pred = bst.predict(x_val)

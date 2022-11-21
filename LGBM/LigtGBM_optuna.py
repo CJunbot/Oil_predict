@@ -17,7 +17,7 @@ def competition_metric(true, pred):
 sampler = TPESampler(seed=10)
 
 def objective(trial):
-    train = pd.read_csv('../data/train.csv')
+    train = pd.read_csv('train.csv')
 
     new_names = {col: re.sub(r'[^A-Za-z0-9_]+', '', col) for col in train.columns}
     new_n_list = list(new_names.values())
@@ -26,14 +26,14 @@ def objective(trial):
                  enumerate(new_names.items())}
     train = train.rename(columns=new_names)
 
-    categorical_features = ['COMPONENT_ARBITRARY', 'YEAR']
+    categorical_features = ['COMPONENT_ARBITRARY']
     # Inference(실제 진단 환경)에 사용하는 컬럼
 
     train = train.fillna(0)
     two_Y = train['Y_LABEL']
     all_X = train.drop(['ID', 'Y_LABEL'], axis=1)
 
-    x_train,  x_val, y_train, y_val = train_test_split(all_X, two_Y, test_size=0.2, random_state=42, stratify=two_Y)
+    x_train, x_val, y_train, y_val = train_test_split(all_X, two_Y, test_size=0.2, random_state=42, stratify=two_Y)
 
     le = LabelEncoder()
     for col in categorical_features:
@@ -49,21 +49,16 @@ def objective(trial):
     params['metric'] = 'binary_logloss'
     params['device_type'] = 'gpu'
     params['boosting_type'] = 'gbdt'
+    params['random_state'] = 42
     params['learning_rate'] = trial.suggest_float("learning_rate", 0.001, 0.005)
     # 예측력 상승
     params['num_iterations'] = 5000
-    params['min_child_samples'] = trial.suggest_int('min_child_samples', 100, 1000)
-    params['n_estimators'] = trial.suggest_int('n_estimators',1000, 25000)
-    params['num_leaves'] = trial.suggest_int('num_leaves', 1000, 25056)
-    params['max_depth'] = trial.suggest_int('max_depth', 20, 60)
+    params['min_child_samples'] = trial.suggest_int('min_child_samples', 1, 100)
+    params['n_estimators'] = trial.suggest_int('n_estimators',10, 3000)
+    params['num_leaves'] = trial.suggest_int('num_leaves', 100, 2505)
+    params['max_depth'] = trial.suggest_int('max_depth', 20, 250)
     # overfitting 방지
-    params['min_child_weight'] = trial.suggest_float('min_child_weight', 0.01, 4)
-    params['min_child_samples'] = trial.suggest_int('min_child_samples', 1, 50)
     params['bagging_fraction'] = trial.suggest_float('bagging_fraction', 0.6, 0.99)
-    params['subsample_freq'] = trial.suggest_int('subsample_freq', 60, 99)
-    params['lambda_l1'] = trial.suggest_float('lambda_l1', 0.01, 2)
-    params['lambda_l2'] = trial.suggest_float('lambda_l2', 0.01, 2)
-    params['min_gain_to_split'] = trial.suggest_float('min_gain_to_split', 0.001, 0.8)
     params['feature_fraction'] = trial.suggest_float('feature_fraction', 0.7, 0.99)
 
     bst = lgb.train(params, train_data, 5000, [val_data], verbose_eval=5, early_stopping_rounds=25)
@@ -82,7 +77,7 @@ def objective(trial):
 
 if __name__ == "__main__":
     study = optuna.create_study(direction="maximize", sampler=sampler)
-    study.optimize(objective, n_trials=100)
+    study.optimize(objective, n_trials=120)
 
     print("Number of finished trials: {}".format(len(study.trials)))
 
