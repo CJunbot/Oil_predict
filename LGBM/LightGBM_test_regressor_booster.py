@@ -1,12 +1,11 @@
 import pandas as pd
 import lightgbm as lgb
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_absolute_error
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import f1_score
 import re
 import numpy as np
-from sklearn.multioutput import MultiOutputRegressor
+from scipy.stats import skew
 
 
 def competition_metric(true, pred):
@@ -15,7 +14,7 @@ def competition_metric(true, pred):
 
 train = pd.read_csv('train.csv')
 test = pd.read_csv('test.csv')
-knowledge = pd.read_csv('LGBM_oil_train_predict.csv')
+knowledge = pd.read_csv('LGBM_oil_train_predict_nofold.csv')
 
 new_names = {col: re.sub(r'[^A-Za-z0-9_]+', '', col) for col in train.columns}
 new_n_list = list(new_names.values())
@@ -31,12 +30,12 @@ train = train.fillna(0)
 test = test.fillna(0)
 
 all_X = train.drop(['ID', 'Y_LABEL'], axis = 1)
-all_X = all_X[test_stage_features]
+x_origin = all_X[test_stage_features]
 y_origin = train['Y_LABEL']
-
 test = test.drop(['ID'], axis=1)
 
-x_train, x_val, y_train, y_val = train_test_split(all_X, knowledge, test_size=0.2, random_state=42)
+knowledge['0'] = np.log1p(knowledge['0'])
+x_train, x_val, y_train, y_val = train_test_split(x_origin, knowledge, test_size=0.2, random_state=42)
 
 y_train = y_train['0']
 label = y_val['1']
@@ -81,8 +80,8 @@ bst = lgb.LGBMRegressor(**params)
 bst.fit(x_train, y_train, eval_set=[(x_val, y_val)], eval_metric='l1', early_stopping_rounds=25)
 pred = bst.predict(test, num_iteration=bst.best_iteration_)
 
-for i in [0.05, 0.1, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2, 0.21, 0.22, 0.23, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]:
-    preds = bst.predict(x_val, num_iteration=bst.best_iteration_)
+for i in [0.05, 0.1, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2, 0.21, 0.22, 0.23, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]:
+    preds = np.expm1(bst.predict(x_val, num_iteration=bst.best_iteration_))
     preds = np.where(np.array(preds) > i, 1, 0)
     f1_macro = competition_metric(label, preds)
     print('The f1_macro of prediction is:', {i}, f1_macro)

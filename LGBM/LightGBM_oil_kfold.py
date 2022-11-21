@@ -18,7 +18,6 @@ def get_values(value):
     return value.values.reshape(-1, 1)
 
 
-
 train = pd.read_csv('train.csv')
 test = pd.read_csv('test.csv')
 
@@ -39,14 +38,6 @@ train = train.fillna(0)
 test = test.fillna(0)
 
 x_origin = train.drop(['ID', 'Y_LABEL'], axis = 1)
-
-# Outlier delete
-features_index = x_origin.dtypes[x_origin.dtypes != 'object'].index
-skew_features = x_origin[features_index].apply(lambda x: skew(x))
-skew_features_top = skew_features[skew_features > 1]
-print(skew_features_top)
-x_origin[skew_features_top.index] = np.log1p(x_origin[skew_features_top.index])
-
 y_origin = train['Y_LABEL']
 
 test = test.drop(['ID'], axis = 1)

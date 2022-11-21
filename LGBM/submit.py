@@ -12,7 +12,7 @@ pred1 = pd.read_csv('pred1.csv')['0']
 
 submit = np.zeros(len(pred1))
 for i in range(len(submit)):
-    if pred1[i] > 0.2:
+    if pred1[i] > 0.14:
         submit[i] = str(1)
     else:
         submit[i] = str(0)
