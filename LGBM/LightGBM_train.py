@@ -61,18 +61,14 @@ params['boosting_type'] = 'gbdt'
 params['learning_rate'] = 0.0037695694179783445  # 0.013119로 고치면 댐
 # 예측력 상승
 params['num_iterations'] = 5500  # = num round, num_boost_round
-params['min_child_samples'] = 133
-params['n_estimators'] = 9989  # 8500
-params['num_leaves'] = 19916
-params['max_depth'] = 41  # 26?
+params['min_child_samples'] = 30
+params['num_leaves'] = 128
+params['random_state'] = 42
 # overfitting 방지
-params['min_child_weight'] = 2.132006838223528  # 높을수록 / 최대 6?
-params['subsample'] = 0.9867667532255102  # 낮을수록 overfitting down / 최소 0  = bagging_fraction
-params['subsample_freq'] = 63
-params['reg_alpha'] = 0.26753664302600466  # = lambda l1
-params['reg_lambda'] = 0.10282992873487086  # = lambda l2
-params['min_gain_to_split'] = 0.5613968110180947  # = min_split_gain
-params['colsample_bytree'] = 0.9039390685690392  # 낮을 수록 overfitting down / 최소 0  = feature_fraction
+params['subsample'] = 0.8  # 낮을수록 overfitting down / 최소 0  = bagging_fraction
+
+params['colsample_bytree'] = 0.7  # 낮을 수록 overfitting down / 최소 0  = feature_fraction
+
 #bst = lgb.LGBMClassifier(**params)
 #bst.fit(x_train, y_train, eval_set=[(x_val, y_val)], eval_metric='binary_logloss', early_stopping_rounds=5)
 bst = lgb.train(params, train_data, 5000, [val_data], verbose_eval=5, early_stopping_rounds=25)

@@ -66,9 +66,8 @@ for tr_idx, val_idx in folds.split(x_origin, y_origin):
     params['random_state']= 42
     params['learning_rate'] = 0.0037695694179783445  # 0.013119로 고치면 댐
     # 예측력 상승
-    params['num_iterations'] = 5500  # = num round, num_boost_round
+    params['num_iterations'] = 5500  # = num round, num_boost_round, n+_estimators
     params['min_child_samples'] = 133
-    params['n_estimators'] = 9989  # 8500
     params['num_leaves'] = 19916
     params['max_depth'] = 41  # 26?
     # overfitting 방지
